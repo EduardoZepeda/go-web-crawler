@@ -35,7 +35,7 @@ go run main.go
  
  ## Acceptance criteria
  
- The crawler consider a successful response as one with a code status between 200 and 300 and ignores any redirection. I'm aware this could lead to some false positives. Please modify the code to your own needs.
+ The crawler consider a successful response as one with a code status between 200 and 300 and ignores any redirection. I'm aware this could lead to some false positives. Please modify the code according to your own needs.
  
  ## Flag options
  
