@@ -2,9 +2,13 @@
 
 This crawler was inspired by [scanning-26-million-domains-for-exposed-env-files](https://hackernoon.com/scanning-26-million-domains-for-exposed-env-files) article. It uses concurrency to crawl a list of domains and check for exponsed .env and .git uris, in plain or www subdomains.
 
-## Usage
+This project uses Go 1.19. Maybe I'll add a Docker file later.
 
-You need a file with domain names separated by newlines. Default file name is *urls.txt*
+## Quickstart
+
+### You need a file with urls
+
+You need a file with domain names separated by newlines. Default file name is *urls.txt* at the root of the project.
 
 ```bash
 example.org
@@ -20,8 +24,16 @@ https://example.org/.env
 https://example.org/.git
 # ...
  ```
+
+ ### Run the crawler
+
+ Once you got the file set, you can start crawling with:
+
+ ```bash
+go run main.go
+ ```
  
- ### Acceptance criteria
+ ## Acceptance criteria
  
  The crawler consider a successful response as one with a code status between 200 and 300 and ignores any redirection. I'm aware this could lead to some false positives. Please modify the code to your own needs.
  
@@ -37,4 +49,4 @@ https://example.org/.git
  
  ## Disclaimer
  
- I do not endorse or encourage the use of this crawler to engage in illegal pentesting. Before using this crawler make sure you got the proper written permission from the website's owner and contact with your lawyer.
+ I do not endorse or encourage the use of this crawler to engage in illegal pentesting. Before using this crawler make sure you got the proper written permission from the website's owner and make sure to consult with your lawyer.
