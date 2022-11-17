@@ -32,6 +32,21 @@ type UrlParser struct {
 	Urls    map[url.URL]bool
 }
 
+func (crawl *Crawler) AppendUrlToQueue(parsedUrl string, uri string) error {
+	// According to go's documentation urls are recognized as [scheme:][//[userinfo@]host][/]path[?query][#fragment]
+	joinedUrl, err := url.JoinPath(parsedUrl, uri)
+	if err != nil {
+		return err
+	}
+	u, err := url.Parse(joinedUrl)
+	if err != nil {
+		return err
+	} else {
+		crawl.Urls.Urls[*u] = false
+	}
+	return err
+}
+
 func (crawl *Crawler) GetUrls() error {
 	f, err := os.Open(crawl.Urls.FileSrc)
 	if err != nil {
@@ -41,16 +56,10 @@ func (crawl *Crawler) GetUrls() error {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		for _, uri := range crawl.Cfg.Uris {
-			// According to go's documentation urls are recognized as [scheme:][//[userinfo@]host][/]path[?query][#fragment]
-			joinedUrl, err := url.JoinPath("https://"+scanner.Text(), uri)
+			err := crawl.AppendUrlToQueue("https://"+scanner.Text(), uri)
+			err = crawl.AppendUrlToQueue("https://www."+scanner.Text(), uri)
 			if err != nil {
 				return err
-			}
-			u, err := url.Parse(joinedUrl)
-			if err != nil {
-				return err
-			} else {
-				crawl.Urls.Urls[*u] = false
 			}
 		}
 	}
