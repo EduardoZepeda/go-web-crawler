@@ -14,9 +14,9 @@ func main() {
 	uris := []string{".env", ".git"}
 	cfg.Uris = uris
 	flag.IntVar(&cfg.MaxConnections, "concurrent", 10, "Max number of concurrent requests")
-	flag.IntVar(&cfg.RequestTimeout, "requestTimeout", 5, "Timeout (in seconds) before http request is aborted")
-	flag.IntVar(&cfg.TimeOutConnection, "connectionTimeout", 10, "Timeout (in seconds) before opening a new http connection")
-	flag.IntVar(&cfg.DelayAfterMaxConnectionsReached, "sleep", 2, "Timeout (in seconds) to sleep after the max number of concurrent connections has been reached")
+	flag.IntVar(&cfg.RequestTimeout, "reqTimeout", 5, "Timeout (in seconds) before http request is aborted")
+	flag.IntVar(&cfg.TimeOutConnection, "connTimeout", 10, "Timeout (in seconds) before opening a new http connection")
+	flag.IntVar(&cfg.DelayAfterMaxConnectionsReached, "sleep", 0, "Timeout (in seconds) to sleep after the max number of concurrent connections has been reached")
 	flag.StringVar(&urls.FileSrc, "file", "urls.txt", "Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt")
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	flag.Parse()
