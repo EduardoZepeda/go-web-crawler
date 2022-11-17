@@ -38,7 +38,7 @@ func (crawl *Crawler) AppendUrlToQueue(parsedUrl string, uri string) error {
 	if err != nil {
 		return err
 	}
-	u, err := url.Parse(joinedUrl)
+	u, err := url.ParseRequestURI(joinedUrl)
 	if err != nil {
 		return err
 	} else {
@@ -57,6 +57,9 @@ func (crawl *Crawler) GetUrls() error {
 	for scanner.Scan() {
 		for _, uri := range crawl.Cfg.Uris {
 			err := crawl.AppendUrlToQueue("https://"+scanner.Text(), uri)
+			if err != nil {
+				return err
+			}
 			err = crawl.AppendUrlToQueue("https://www."+scanner.Text(), uri)
 			if err != nil {
 				return err
