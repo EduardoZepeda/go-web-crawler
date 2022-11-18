@@ -2,8 +2,6 @@
 
 This crawler was inspired by [scanning-26-million-domains-for-exposed-env-files](https://hackernoon.com/scanning-26-million-domains-for-exposed-env-files) article. It uses concurrency to crawl a list of domains and check for exposed .env and .git uris, in plain or www subdomains.
 
-This project uses Go 1.19. Maybe I'll add a Docker file later.
-
 ## Quickstart
 
 ### You need a file with urls
@@ -48,9 +46,9 @@ go run main.go
  - file: Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt at root of the project.
  - showResults: Show a summary of the urls with possible exposed .git or .env uris.
 
- ## Using Docker
+ ## Quick start with Docker
 
- To run it using docker just follow the usual procedure. Make sure the urls file is at the root of the project.
+ To run this project using docker just follow the usual procedure. Make sure the urls file is at the root of the project.
 
  ```bash
  docker build . -t <name>
