@@ -47,7 +47,21 @@ go run main.go
  - sleep: Timeout (in seconds) to sleep after the max number of concurrent connections has been reached. Default to 0
  - file: Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt at root of the project.
  - showResults: Show a summary of the urls with possible exposed .git or .env uris.
- 
+
+ ## Using Docker
+
+ To run it using docker just follow the usual procedure. Make sure the urls file is at the root of the project.
+
+ ```bash
+ docker build . -t <name>
+ ``` 
+
+ After that you can run the crawler. You can pass any number of flags and its corresponding values.
+
+ ```bash
+ docker run --rm <name> [<flag>=<value>...]
+ ``` 
+
  ## Disclaimer
  
  I do not endorse or encourage the use of this crawler to engage in illegal pentesting. Before using this crawler make sure you got the proper written permission from the website's owner and make sure to consult with your lawyer.
