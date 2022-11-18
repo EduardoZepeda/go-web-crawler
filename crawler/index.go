@@ -25,6 +25,7 @@ type Config struct {
 	DelayAfterMaxConnectionsReached int
 	RequestTimeout                  int
 	Uris                            []string
+	ShowResults                     bool
 }
 
 type UrlParser struct {
@@ -34,7 +35,7 @@ type UrlParser struct {
 
 func (crawl *Crawler) AppendUrlToQueue(parsedUrl string, uri string) error {
 	// According to go's documentation urls are recognized as [scheme:][//[userinfo@]host][/]path[?query][#fragment]
-	joinedUrl, err := url.JoinPath(parsedUrl, uri)
+	joinedUrl, err := url.JoinPath(parsedUrl, uri, "/")
 	if err != nil {
 		return err
 	}
@@ -110,7 +111,8 @@ func (crawl *Crawler) ParseUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
 	// Get response stats code, and convert body of response to a readable string
 	// Don't forget to close the response's body
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		crawl.Logger.Println("[ ok ] ", url.String())
+		crawl.Logger.Printf("[ ok ] %s", url.String())
+		crawl.Urls.Urls[url] = true
 		return true, nil
 	}
 	return false, err
@@ -144,10 +146,21 @@ func (crawl *Crawler) ParseUrls() {
 	}
 }
 
+func (crawl *Crawler) ShowResults() {
+	for key, value := range crawl.Urls.Urls {
+		if value {
+			crawl.Logger.Printf("[ ok ] %s", key.String())
+		}
+	}
+}
+
 func (crawler *Crawler) Crawl() {
 	err := crawler.GetUrls()
 	if err != nil {
 		crawler.Logger.Fatalf("Failed to read the urls %s file: %s", crawler.Urls.FileSrc, err)
 	}
 	crawler.ParseUrls()
+	if crawler.Cfg.ShowResults {
+		crawler.ShowResults()
+	}
 }

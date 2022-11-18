@@ -18,6 +18,7 @@ func main() {
 	flag.IntVar(&cfg.TimeOutConnection, "connTimeout", 10, "Timeout (in seconds) before opening a new http connection")
 	flag.IntVar(&cfg.DelayAfterMaxConnectionsReached, "sleep", 0, "Timeout (in seconds) to sleep after the max number of concurrent connections has been reached")
 	flag.StringVar(&urls.FileSrc, "file", "urls.txt", "Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt")
+	flag.BoolVar(&cfg.ShowResults, "showResults", true, "Show all the sites that returned a valid response")
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	flag.Parse()
 	// Go package has many useful utilities for handling urls

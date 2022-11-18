@@ -1,6 +1,6 @@
 # Go crawler for .env and .git
 
-This crawler was inspired by [scanning-26-million-domains-for-exposed-env-files](https://hackernoon.com/scanning-26-million-domains-for-exposed-env-files) article. It uses concurrency to crawl a list of domains and check for exponsed .env and .git uris, in plain or www subdomains.
+This crawler was inspired by [scanning-26-million-domains-for-exposed-env-files](https://hackernoon.com/scanning-26-million-domains-for-exposed-env-files) article. It uses concurrency to crawl a list of domains and check for exposed .env and .git uris, in plain or www subdomains.
 
 This project uses Go 1.19. Maybe I'll add a Docker file later.
 
@@ -46,6 +46,7 @@ go run main.go
  - connTimeout: Timeout (in seconds) before opening a new http connection. Default to 10
  - sleep: Timeout (in seconds) to sleep after the max number of concurrent connections has been reached. Default to 0
  - file: Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt at root of the project.
+ - showResults: Show a summary of the urls with possible exposed .git or .env uris.
  
  ## Disclaimer
  
