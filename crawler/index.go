@@ -170,9 +170,9 @@ func (crawler *Crawler) Crawl() {
 	}
 	crawler.ParseUrls()
 	crawler.Logger.Debugf("Finished parsing the urls. %d urls to scan", len(crawler.Urls.Urls))
+	crawler.Logger.Debug("Terminating the process.")
 	crawler.Logger.Debug("Printing the results of the crawling process:")
 	if crawler.Cfg.ShowResults {
 		crawler.ShowResults()
 	}
-	crawler.Logger.Debug("Terminating the process.")
 }

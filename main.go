@@ -22,8 +22,8 @@ func main() {
 	flag.BoolVar(&cfg.ShowResults, "showResults", true, "Show all the sites that returned a valid response")
 	logger := log.New()
 	logger.SetFormatter(&log.JSONFormatter{})
-	logger.SetLevel(log.Level(cfg.LogLevel))
 	flag.Parse()
+	logger.SetLevel(log.Level(cfg.LogLevel))
 	// Go package has many useful utilities for handling urls
 	urlMap := make(map[url.URL]bool)
 	urls.Urls = urlMap
