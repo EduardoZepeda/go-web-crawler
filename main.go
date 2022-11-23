@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/url"
-	"os"
 	"webcrawler/crawler"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -13,13 +13,16 @@ func main() {
 	var urls crawler.UrlParser
 	uris := []string{".env", ".git"}
 	cfg.Uris = uris
-	flag.IntVar(&cfg.MaxConnections, "concurrent", 10, "Max number of concurrent requests")
+	flag.IntVar(&cfg.LogLevel, "logLevel", 1, "Log level. Valid values from 1 to 6. Based on logrus levels.")
+	flag.IntVar(&cfg.MaxConnections, "concurrent", 150, "Max number of concurrent requests")
 	flag.IntVar(&cfg.RequestTimeout, "reqTimeout", 5, "Timeout (in seconds) before http request is aborted")
 	flag.IntVar(&cfg.TimeOutConnection, "connTimeout", 10, "Timeout (in seconds) before opening a new http connection")
 	flag.IntVar(&cfg.DelayAfterMaxConnectionsReached, "sleep", 0, "Timeout (in seconds) to sleep after the max number of concurrent connections has been reached")
 	flag.StringVar(&urls.FileSrc, "file", "urls.txt", "Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt")
 	flag.BoolVar(&cfg.ShowResults, "showResults", true, "Show all the sites that returned a valid response")
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := log.New()
+	logger.SetFormatter(&log.JSONFormatter{})
+	logger.SetLevel(log.Level(cfg.LogLevel))
 	flag.Parse()
 	// Go package has many useful utilities for handling urls
 	urlMap := make(map[url.URL]bool)

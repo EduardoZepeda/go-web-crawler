@@ -2,14 +2,15 @@ package crawler
 
 import (
 	"bufio"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -26,6 +27,7 @@ type Config struct {
 	RequestTimeout                  int
 	Uris                            []string
 	ShowResults                     bool
+	LogLevel                        int
 }
 
 type UrlParser struct {
@@ -49,10 +51,12 @@ func (crawl *Crawler) AppendUrlToQueue(parsedUrl string, uri string) error {
 }
 
 func (crawl *Crawler) GetUrls() error {
+	crawl.Logger.Debug("Trying to open file: %s", crawl.Urls.FileSrc)
 	f, err := os.Open(crawl.Urls.FileSrc)
 	if err != nil {
 		return err
 	}
+	crawl.Logger.Debug("Successfully opened file: %s", crawl.Urls.FileSrc)
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -75,11 +79,11 @@ func (crawl *Crawler) GetUrls() error {
 
 func (crawl *Crawler) cleanup() {
 	if recovered := recover(); recovered != nil {
-		//crawl.Logger.Println("[ x ] Failed url: ", recovered)
+		crawl.Logger.Error("Failed to fetch url: ", recovered)
 	}
 }
 
-func (crawl *Crawler) ParseUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
+func (crawl *Crawler) FetchUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
 	// Make sure to remove counter from waitgroup so crawler doesn't stop
 	defer wg.Done()
 	defer crawl.cleanup()
@@ -94,16 +98,17 @@ func (crawl *Crawler) ParseUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
 	// Create a New Request, it's not send at this point
 	req, err := http.NewRequest(http.MethodGet, url.String(), nil)
 	if err != nil {
-		crawl.Logger.Panic(err)
-		return false, err
+		crawl.Logger.Error(err)
+		panic(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(crawl.Cfg.RequestTimeout)*time.Second)
 	defer cancel()
+	crawl.Logger.Trace("Starting request to: %s", url.String())
 	req = req.WithContext(ctx)
 	resp, err := c.Do(req)
 	if err != nil {
-		crawl.Logger.Panic(err)
-		return false, err
+		crawl.Logger.Error(err)
+		panic(err)
 	}
 	defer resp.Body.Close()
 	// Read data in bytes from the response
@@ -111,7 +116,7 @@ func (crawl *Crawler) ParseUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
 	// Get response stats code, and convert body of response to a readable string
 	// Don't forget to close the response's body
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		crawl.Logger.Printf("[ ok ] %s", url.String())
+		crawl.Logger.Info("[ Exposed ] %s", url.String())
 		crawl.Urls.Urls[url] = true
 		return true, nil
 	}
@@ -122,7 +127,7 @@ func (crawl *Crawler) ParseUrlsConcurrently(urls *map[url.URL]bool) {
 	var wg sync.WaitGroup
 	for url, _ := range *urls {
 		wg.Add(1)
-		go crawl.ParseUrl(url, &wg)
+		go crawl.FetchUrl(url, &wg)
 	}
 	wg.Wait()
 }
@@ -135,12 +140,14 @@ func (crawl *Crawler) ParseUrls() {
 			continue
 		}
 		crawl.ParseUrlsConcurrently(&batchUrls)
+		crawl.Logger.Debugf("Sleeping for %d seconds", crawl.Cfg.DelayAfterMaxConnectionsReached)
 		time.Sleep(time.Duration(crawl.Cfg.DelayAfterMaxConnectionsReached) * time.Second)
-
+		crawl.Logger.Debugf("Finished sleeping after %d seconds", crawl.Cfg.DelayAfterMaxConnectionsReached)
 		batchUrls = make(map[url.URL]bool, crawl.Cfg.MaxConnections)
 	}
 	// crawl the remanent urls
 	if len(batchUrls) > 0 {
+		crawl.Logger.Debugf("Crawling the rest of urls:", batchUrls)
 		crawl.ParseUrlsConcurrently(&batchUrls)
 		batchUrls = make(map[url.URL]bool, crawl.Cfg.MaxConnections)
 	}
@@ -149,18 +156,23 @@ func (crawl *Crawler) ParseUrls() {
 func (crawl *Crawler) ShowResults() {
 	for key, value := range crawl.Urls.Urls {
 		if value {
-			crawl.Logger.Printf("[ ok ] %s", key.String())
+			fmt.Printf("%s\n", key.String())
 		}
 	}
 }
 
 func (crawler *Crawler) Crawl() {
+	crawler.Logger.Debug("Starting the crawling process with the following configuration:", crawler.Cfg)
+	crawler.Logger.Debugf("Getting the urls from: %s", crawler.Urls.FileSrc)
 	err := crawler.GetUrls()
 	if err != nil {
 		crawler.Logger.Fatalf("Failed to read the urls %s file: %s", crawler.Urls.FileSrc, err)
 	}
 	crawler.ParseUrls()
+	crawler.Logger.Debugf("Finished parsing the urls. %d urls to scan", len(crawler.Urls.Urls))
+	crawler.Logger.Debug("Printing the results of the crawling process:")
 	if crawler.Cfg.ShowResults {
 		crawler.ShowResults()
 	}
+	crawler.Logger.Debug("Terminating the process.")
 }
