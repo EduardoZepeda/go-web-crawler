@@ -4,13 +4,14 @@ This crawler was inspired by [scanning-26-million-domains-for-exposed-env-files]
 
 ## Quickstart
 
-### Clone the project or build an executable
+### Clone the project and install dependencies
 
 As any go project you can run it directly or compile it to produce a binary file.
 
  ```bash
 git clone https://github.com/eduardoZepeda/go-web-crawler
 cd go-web-crawler/
+go mod tidy
  ```
 
 ### You need a file with urls
