@@ -60,7 +60,7 @@ go run main.go
  The following options can be used to customize the crawler behaviour.
  
  - logLevel: The log Level. Valid values: from 1 to 6, ascending verbosity
- - concurrent: Max number of concurrent requests. Default to 10
+ - concurrent: Max number of concurrent requests. Default to 150
  - reqTimeout: Timeout (in seconds) before http request is aborted. Default to 5
  - connTimeout: Timeout (in seconds) before opening a new http connection. Default to 10
  - sleep: Timeout (in seconds) to sleep after the max number of concurrent connections has been reached. Default to 0
