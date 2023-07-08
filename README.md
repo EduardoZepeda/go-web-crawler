@@ -1,12 +1,12 @@
 # Go crawler for .env and .git
 
-This crawler was inspired by [scanning-26-million-domains-for-exposed-env-files](https://hackernoon.com/scanning-26-million-domains-for-exposed-env-files) article. It uses concurrency to crawl a list of domains and check for exposed .env and .git uris, in plain or www subdomains.
+This crawler was inspired by [scanning-26-million-domains-for-exposed-env-files](https://hackernoon.com/scanning-26-million-domains-for-exposed-env-files) article. It uses go's concurrency and worker pool pattern to crawl a list of domains and check for exposed .env and .git uris, in plain or www subdomains.
 
 ## Quickstart
 
 ### Clone the project and install dependencies
 
-As any go project you can run it directly or compile it to produce a binary file.
+As you would with any go project, you can run it directly or compile it to produce a binary file.
 
  ```bash
 git clone https://github.com/eduardoZepeda/go-web-crawler
@@ -63,7 +63,7 @@ go run main.go
  - concurrent: Max number of concurrent requests. Default to 150
  - reqTimeout: Timeout (in seconds) before http request is aborted. Default to 5
  - connTimeout: Timeout (in seconds) before opening a new http connection. Default to 10
- - sleep: Timeout (in seconds) to sleep after the max number of concurrent connections has been reached. Default to 0
+ - sleep: Timeout (in seconds) to sleep per worker or connection before the crawler makes a a new request.
  - file: Route of the file containing the urls to crawl, separated by newlines. Default to *urls.txt* at root of the project.
  - showResults: Show a summary of the urls with possible exposed .git or .env uris at the end of the execution process.
 
