@@ -6,9 +6,10 @@ import (
 )
 
 type WorkerPool struct {
-	MaxWorkers int
-	JobQueue   chan Job
-	Wg         *sync.WaitGroup
+	MaxWorkers     int
+	WorkerCoolDown int
+	JobQueue       chan Job
+	Wg             *sync.WaitGroup
 }
 
 func (wp *WorkerPool) Start() {
@@ -25,6 +26,7 @@ func (wp *WorkerPool) AddJob(job *Job) {
 func NewWorkerPool(cfg *config.Config, wg *sync.WaitGroup) *WorkerPool {
 	workerPool := &WorkerPool{}
 	workerPool.MaxWorkers = cfg.MaxConnections
+	workerPool.WorkerCoolDown = cfg.DelayAfterSingleRequest
 	workerPool.JobQueue = make(chan Job, len(cfg.Uris))
 	workerPool.Wg = wg
 	return workerPool

@@ -176,7 +176,6 @@ func (crawl *Crawler) SetJobQueue() {
 		url := urlToFetch
 		job := workerpool.NewJob(func() { crawl.FetchUrl(url, crawl.Wp.Wg) })
 		crawl.Wp.AddJob(job)
-		time.Sleep(time.Duration(crawl.Cfg.DelayAfterSingleRequest))
 	}
 }
 

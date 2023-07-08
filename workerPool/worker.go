@@ -1,5 +1,9 @@
 package workerpool
 
+import (
+	"time"
+)
+
 type Worker struct {
 	Id         int
 	WorkerPool *WorkerPool
@@ -16,6 +20,7 @@ func (w *Worker) Start() {
 			// If worker quit is true, exit loop
 			return
 		}
+		time.Sleep(time.Duration(w.WorkerPool.WorkerCoolDown) * time.Second)
 	}
 }
 
