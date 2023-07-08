@@ -10,7 +10,9 @@ import (
 	"os"
 	"sync"
 	"time"
+	"webcrawler/config"
 	"webcrawler/utils"
+	workerpool "webcrawler/workerPool"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -19,39 +21,35 @@ import (
 type Urls map[url.URL]bool
 
 type Crawler struct {
-	Cfg          *Config
-	UrlRetriever *UrlRetriever
-	Logger       *log.Logger
+	Cfg      *config.Config
+	UrlQueue *UrlQueue
+	Logger   *log.Logger
+	Wp       *workerpool.WorkerPool
 }
 
-type Config struct {
-	MaxConnections                  int
-	TimeOutConnection               int
-	DelayAfterMaxConnectionsReached int
-	RequestTimeout                  int
-	Uris                            []string
-	ShowResults                     bool
-	LogLevel                        int
-	Src                             string
-}
-
-type UrlRetriever struct {
+type UrlQueue struct {
 	Urls Urls
 }
 
 type CrawlerInterface interface {
+	SetUrls(urls *Urls) error
 	GetUrls() (*Urls, error)
+	FetchUrl(url url.URL, wg *sync.WaitGroup) (bool, error)
+	GetVulnerableUrls()
+	GetAllUrls()
+	SetConfig()
 	Init()
 	Crawl()
+	cleanup()
 }
 
-func (crawl Crawler) SetUrls(urls *Urls) error {
+func (crawl *Crawler) SetUrls(urls *Urls) error {
 	urls, err := crawl.GetUrls()
-	crawl.UrlRetriever.Urls = *urls
+	crawl.UrlQueue.Urls = *urls
 	return err
 }
 
-func (crawl Crawler) GetUrls() (*Urls, error) {
+func (crawl *Crawler) GetUrls() (*Urls, error) {
 	urls := make(Urls)
 	crawl.Logger.Debug("Trying to open file: %s", crawl.Cfg.Src)
 	f, err := os.Open(crawl.Cfg.Src)
@@ -81,13 +79,13 @@ func (crawl Crawler) GetUrls() (*Urls, error) {
 	return &urls, nil
 }
 
-func (crawl Crawler) cleanup() {
+func (crawl *Crawler) cleanup() {
 	if recovered := recover(); recovered != nil {
 		crawl.Logger.Error("Failed to fetch url: ", recovered)
 	}
 }
 
-func (crawl Crawler) FetchUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
+func (crawl *Crawler) FetchUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
 	// Make sure to remove counter from waitgroup so crawler doesn't stop
 	defer wg.Done()
 	defer crawl.cleanup()
@@ -121,88 +119,75 @@ func (crawl Crawler) FetchUrl(url url.URL, wg *sync.WaitGroup) (bool, error) {
 	// Don't forget to close the response's body
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		crawl.Logger.Info("[ Exposed ] %s", url.String())
-		crawl.UrlRetriever.Urls[url] = true
+		crawl.UrlQueue.Urls[url] = true
 		return true, nil
 	}
 	return false, err
 }
 
-func (crawl Crawler) FetchUrlsConcurrently(urls Urls) {
-	var wg sync.WaitGroup
-	for url, _ := range urls {
-		wg.Add(1)
-		go crawl.FetchUrl(url, &wg)
-	}
-	wg.Wait()
-}
-
-func (crawl Crawler) FetchUrls() {
-	var batchUrls = make(Urls, crawl.Cfg.MaxConnections)
-	for urlToFetch, _ := range crawl.UrlRetriever.Urls {
-		batchUrls[urlToFetch] = false
-		if len(batchUrls) < crawl.Cfg.MaxConnections {
-			continue
-		}
-		crawl.FetchUrlsConcurrently(batchUrls)
-		crawl.Logger.Debugf("Sleeping for %d seconds", crawl.Cfg.DelayAfterMaxConnectionsReached)
-		time.Sleep(time.Duration(crawl.Cfg.DelayAfterMaxConnectionsReached) * time.Second)
-		crawl.Logger.Debugf("Finished sleeping after %d seconds", crawl.Cfg.DelayAfterMaxConnectionsReached)
-		batchUrls = make(Urls, crawl.Cfg.MaxConnections)
-	}
-	// crawl the remanent urls
-	if len(batchUrls) > 0 {
-		crawl.Logger.Debugf("Crawling the rest of urls:", batchUrls)
-		crawl.FetchUrlsConcurrently(batchUrls)
-		batchUrls = make(Urls, crawl.Cfg.MaxConnections)
-	}
-}
-
-func (crawl Crawler) GetVulnerableUrls() {
-	for key, value := range crawl.UrlRetriever.Urls {
+func (crawl *Crawler) GetVulnerableUrls() {
+	for key, value := range crawl.UrlQueue.Urls {
 		if value {
 			fmt.Printf("%s\n", key.String())
 		}
 	}
 }
 
-func (crawl Crawler) GetAllUrls() {
-	for key, value := range crawl.UrlRetriever.Urls {
+func (crawl *Crawler) GetAllUrls() {
+	for key, value := range crawl.UrlQueue.Urls {
 		fmt.Printf("%s:%t\n", key.String(), value)
 	}
 }
 
-func (crawl Crawler) SetConfig() {
+func (crawl *Crawler) SetConfig() {
 	flag.IntVar(&crawl.Cfg.LogLevel, "logLevel", 1, "Log level. Valid values from 1 to 6. Based on logrus levels.")
-	flag.IntVar(&crawl.Cfg.MaxConnections, "concurrent", 150, "Max number of concurrent requests")
+	flag.IntVar(&crawl.Cfg.MaxConnections, "concurrent", 150, "Max number of concurrent requests or workers")
 	flag.IntVar(&crawl.Cfg.RequestTimeout, "reqTimeout", 5, "Timeout (in seconds) before http request is aborted")
 	flag.IntVar(&crawl.Cfg.TimeOutConnection, "connTimeout", 10, "Timeout (in seconds) before opening a new http connection")
 	flag.IntVar(&crawl.Cfg.DelayAfterMaxConnectionsReached, "sleep", 0, "Timeout (in seconds) to sleep after the max number of concurrent connections has been reached")
 	flag.BoolVar(&crawl.Cfg.ShowResults, "showResults", true, "Show all the sites that returned a valid response")
-	flag.StringVar(&crawl.Cfg.Src, "file", "urls.txt", "Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt")
+	flag.StringVar(&crawl.Cfg.Src, "file", "urls.txt", "Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt in the same directory")
 	uris := []string{".env", ".git"}
 	crawl.Cfg.Uris = uris
 	flag.Parse()
 }
 
-func (crawl Crawler) SetLogger() {
+func (crawl *Crawler) SetLogger() {
 	logger := log.New()
 	logger.SetFormatter(&log.JSONFormatter{})
 	logger.SetLevel(log.Level(crawl.Cfg.LogLevel))
 	crawl.Logger = logger
 }
 
-func (crawl Crawler) SetInitialUrls() {
+func (crawl *Crawler) SetInitialUrls() {
 	urlMap := make(Urls)
-	crawl.UrlRetriever.Urls = urlMap
+	crawl.UrlQueue.Urls = urlMap
+}
+
+func (crawl *Crawler) CreateWorkerPool() {
+	var wg sync.WaitGroup
+	crawl.Wp = workerpool.NewWorkerPool(crawl.Cfg, &wg)
+	crawl.Wp.Start()
+}
+
+func (crawl *Crawler) SetJobQueue() {
+	crawl.Wp.Wg.Add(len(crawl.UrlQueue.Urls))
+	for urlToFetch, _ := range crawl.UrlQueue.Urls {
+		url := urlToFetch
+		job := workerpool.NewJob(func() { crawl.FetchUrl(url, crawl.Wp.Wg) })
+		crawl.Wp.AddJob(job)
+		time.Sleep(time.Duration(crawl.Cfg.DelayAfterMaxConnectionsReached))
+	}
 }
 
 func (crawl *Crawler) Init() {
 	crawl.SetConfig()
 	crawl.SetLogger()
 	crawl.SetInitialUrls()
+	crawl.CreateWorkerPool()
 }
 
-func (crawl Crawler) Crawl() {
+func (crawl *Crawler) Crawl() {
 	crawl.Logger.Debug("Starting the crawling process with the following configuration:", crawl.Cfg)
 	crawl.Logger.Debugf("Getting the urls from: %s", crawl.Cfg.Src)
 	urls, err := crawl.GetUrls()
@@ -210,8 +195,9 @@ func (crawl Crawler) Crawl() {
 		crawl.Logger.Fatalf("Failed to obtain the urls %s from: %s", crawl.Cfg.Src, err)
 	}
 	crawl.SetUrls(urls)
-	crawl.FetchUrls()
-	crawl.Logger.Debugf("Finished parsing the urls. %d urls to scan", len(crawl.UrlRetriever.Urls))
+	crawl.SetJobQueue()
+	crawl.Wp.Wg.Wait()
+	crawl.Logger.Debugf("Finished parsing the urls. %d urls to scan", len(crawl.UrlQueue.Urls))
 	crawl.Logger.Debug("Terminating the process.")
 	crawl.Logger.Debug("Printing the results of the crawling process:")
 	if crawl.Cfg.ShowResults {
@@ -220,11 +206,12 @@ func (crawl Crawler) Crawl() {
 }
 
 func New() *Crawler {
-	crawl := &Crawler{
-		Cfg:          &Config{},
-		UrlRetriever: &UrlRetriever{},
-		Logger:       &log.Logger{},
+	crawler := &Crawler{
+		Cfg:      &config.Config{},
+		UrlQueue: &UrlQueue{},
+		Logger:   &log.Logger{},
+		Wp:       &workerpool.WorkerPool{},
 	}
-	crawl.Init()
-	return crawl
+	crawler.Init()
+	return crawler
 }
