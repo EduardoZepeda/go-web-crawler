@@ -144,10 +144,10 @@ func (crawl *Crawler) SetConfig() {
 	flag.IntVar(&crawl.Cfg.MaxConnections, "concurrent", 150, "Max number of concurrent requests or workers")
 	flag.IntVar(&crawl.Cfg.RequestTimeout, "reqTimeout", 5, "Timeout (in seconds) before http request is aborted")
 	flag.IntVar(&crawl.Cfg.TimeOutConnection, "connTimeout", 10, "Timeout (in seconds) before opening a new http connection")
-	flag.IntVar(&crawl.Cfg.DelayAfterMaxConnectionsReached, "sleep", 0, "Timeout (in seconds) to sleep after the max number of concurrent connections has been reached")
-	flag.BoolVar(&crawl.Cfg.ShowResults, "showResults", true, "Show all the sites that returned a valid response")
-	flag.StringVar(&crawl.Cfg.Src, "file", "urls.txt", "Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt in the same directory")
-	uris := []string{".env", ".git"}
+	flag.IntVar(&crawl.Cfg.DelayAfterSingleRequest, "sleep", 0, "Timeout (in seconds) to sleep after each request")
+	flag.BoolVar(&crawl.Cfg.ShowResults, "showResults", true, "Show all the websites that returned a valid response")
+	flag.StringVar(&crawl.Cfg.Src, "file", "urls.txt", "Route of the file containing the urls to crawl, separated by newlines. Default to urls.txt inside the same directory")
+	uris := []string{".env", ".git"} // for now hardcoded git and env
 	crawl.Cfg.Uris = uris
 	flag.Parse()
 }
@@ -176,7 +176,7 @@ func (crawl *Crawler) SetJobQueue() {
 		url := urlToFetch
 		job := workerpool.NewJob(func() { crawl.FetchUrl(url, crawl.Wp.Wg) })
 		crawl.Wp.AddJob(job)
-		time.Sleep(time.Duration(crawl.Cfg.DelayAfterMaxConnectionsReached))
+		time.Sleep(time.Duration(crawl.Cfg.DelayAfterSingleRequest))
 	}
 }
 
