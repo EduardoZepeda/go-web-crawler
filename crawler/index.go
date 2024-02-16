@@ -14,6 +14,7 @@ import (
 	"webcrawler/utils"
 	workerpool "webcrawler/workerPool"
 
+	"github.com/schollz/progressbar/v3"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
@@ -172,10 +173,12 @@ func (crawl *Crawler) CreateWorkerPool() {
 
 func (crawl *Crawler) SetJobQueue() {
 	crawl.Wp.Wg.Add(len(crawl.UrlQueue.Urls))
+	bar := progressbar.Default(int64(len(crawl.UrlQueue.Urls)))
 	for urlToFetch, _ := range crawl.UrlQueue.Urls {
 		url := urlToFetch
 		job := workerpool.NewJob(func() { crawl.FetchUrl(url, crawl.Wp.Wg) })
 		crawl.Wp.AddJob(job)
+		bar.Add(1)
 	}
 }
 
